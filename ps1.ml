@@ -22,11 +22,11 @@ done for you.
 
 let prob0_answer = "int" ;;
 
-let prob1a_answer = "???" ;;
+let prob1a_answer = "string" ;;
 
-let prob1b_answer = "???" ;;
+let prob1b_answer = "int option list" ;;
 
-let prob1c_answer = "???" ;;
+let prob1c_answer = "'(a option * flot option) * bool" ;;
 
 (*......................................................................
 There are several values defined below that do not type check. 
@@ -42,15 +42,43 @@ leave the underscores in as well.)
 ......................................................................*)
 
 (*
+In Ocaml, the type string * int list is the same as string * (int list), or a 
+tuple of a string and an int list. However, we are trying to store a list of 
+tuples of type string * int so we should declare it as *)
+let _prob1d : (string * int) list = [("CS", 51); ("CS", 50)] ;;
+(*
 let _prob1d : string * int list = [("CS", 51); ("CS", 50)] ;;
 *)
-  
+ 
+(*
+	The issue with the code is that add is supposed to take two integers and 
+	adds them, but the code below feeds a float and an int into the add 
+	function. To fix this issue, we can make  add add together two floats, and 
+	turn the 4 into a float either using float_of_int, or just making it 4. . I 
+	will use the latter option. This runs us into the final issue that we are 
+	compare if the float result of add is equal to the int 10, so we can turn 10 
+	into a float as well.
+*)
+let _prob1e : int =
+  let add (x, y) = x +. y in
+  if add (4., 3.9) = 10. then 4 else 2 ;;
 (*
 let _prob1e : int =
   let add (x, y) = x + y in
   if add (4, 3.9) = 10 then 4 else 2 ;;
 *)
 
+(*
+	The type of the second index in the tuple isn't a string, it is an option 
+	due to the None. Since in the non, None cases it is an int, the second type 
+	should be int options. We will need to change the ints to int options. 
+	Therefore the declaration should be
+*)
+let _prob1f : (string * int option) list =
+  [("January", None); ("February", Some 1); ("March", None); 
+   ("April", None); ("May", None); ("June", Some 1); 
+   ("July", None); ("August", None); ("September", Some 3);
+   ("October", Some 1); ("November", Some 2); ("December", Some 3)] ;;
 (*
 let _prob1f : (string * string) list =
   [("January", None); ("February", 1); ("March", None); 
@@ -94,7 +122,11 @@ Here is its signature:
 Replace the line below with your own definition of "reversed".
 ......................................................................*)
 
-let reversed = (fun _ -> failwith "reversed not implemented") ;;
+(* Determines if a list is in reversed order *)
+let rec reversed (lst : int list) : bool =
+	match lst with
+	| hd :: idx2 :: tail -> hd >= idx2 && (reversed (idx2 :: tail)) 
+	| _ -> true;;
 
 (*......................................................................
 Problem 2b: The function "merge" takes two integer lists, each
@@ -117,8 +149,16 @@ Here is its signature:
 Replace the line below with your own definition of "merge".
 ......................................................................*)
 
-let merge = (fun _ -> failwith "merge not implemented") ;;
+(* Merges two ordered lists in order*)
+let rec merge (x : int list) (y : int list) =
+	match x, y with
+	| xhd :: xtl, yhd :: ytl -> 
+		if xhd < yhd then xhd :: (merge xtl y) 
+		else yhd :: (merge x ytl)
+	| _, _ -> x @ y;;
 
+(* I remembered the implementation of merge from the textbook reading, so this 
+is probably quite similar*)
 (*......................................................................
 Problem 2c: The function "unzip", given a list of integer pairs,
 returns a pair of lists, the first of which contains each first
@@ -136,7 +176,16 @@ Here is its signature:
 Replace the line below with your own definition of "unzip".
 ......................................................................*)
 
-let unzip = (fun _ -> failwith "unzip not implemented") ;;
+(* Unzips a list of tuples into a tuple of lists*)
+let rec unzip ls =
+	(* Adds elements from a single tuple to a tuple of lists*)
+	let add ((lft, rght) : int * int) ((l_lst, r_lst) : int list * int list) =
+	 	(lft :: l_lst, rght :: r_lst) in
+
+	match ls with
+	| hd :: tl -> add hd (unzip tl)
+	| _ -> ([], []);;
+
 
 (*......................................................................
 Problem 2d: The function "variance" takes a float list and returns
@@ -168,7 +217,38 @@ Here is its signature:
 Replace the line below with your own definition of "variance".
 ......................................................................*)
 
-let variance = (fun _ -> failwith "variance not implemented") ;;
+let variance (lst : float list) = 
+	(* Fold right could be used for length and sum so I wrote it to avoid
+	extra code being written*)
+	let rec fold_right f lst = 
+		match lst with
+		| [] -> 0.
+		| hd :: tl -> f hd (fold_right f tl) in
+
+	(* The length of a list *)
+	let length lst = fold_right (fun _hd tl -> 1. +. tl) lst in
+
+	(* The sum of a list *)
+	let sum (lst : float list) = fold_right (+.) lst in
+
+	(* The mean of a list *)
+	let mean (lst : float list) = (sum lst) /. (length lst) in
+
+	(* The square of a float *)
+	let square (num : float) = num *. num in
+
+	(* Recursively goes through each element in a list and finds the variance
+	of it, and adds it to the variance of the rest of the list. I did it this
+	way instead of using variance for it so I could pass in the length and mean
+	of the list to avoid extra computation time *)
+	let rec vary (lst : float list) (len : float) (mean : float) = 
+		match lst with
+		| [] -> 0.
+		| hd :: tl -> 
+			(square (hd -. mean)) /. (len -. 1.) +. (vary tl len mean) in
+
+	if (length lst) > 1. then Some (vary lst (length lst) (mean lst))
+	else None;;
 
 (*......................................................................
 Problem 2e: The function "few divisors" takes two integers, x and y, and
@@ -194,7 +274,15 @@ Here is its signature:
 Replace the line below with your own definition of "few_divisors".
 ......................................................................*)
 
-let few_divisors = (fun _ -> failwith "few_divisors not implemented") ;;
+(* Returns if the first number has fewer divisors than the second number *)
+let few_divisors (x : int) (y : int) = 
+	(* Goes from n -> 1 to find the number of divisors n has *)
+	let rec find_divisors (num : int) (idx : int) = 
+		if idx = 1 then 1 
+		else if num mod idx = 0 then 1 + find_divisors num (idx-1) 
+			else find_divisors num (idx-1) in
+
+	(find_divisors x x) < y;;
 
 (*......................................................................
 Problem 2f: The function "concat_list" takes two arguments: sep, a
@@ -218,8 +306,13 @@ Here is its signature:
 Replace the lines below with your own definition of "concat_list"
 ......................................................................*)
 
-let concat_list =
-  (fun _ -> (fun _ -> failwith "concat_list not implemented")) ;;
+(* Concatenates a list of strings into one string with a concat in between *)
+let rec concat_list (concat : string) (lst : string list) =
+	match lst with
+	| [] -> ""
+	| [x] -> x
+	| hd :: tl -> hd ^ concat ^ (concat_list concat tl);;
+  
 
 (*......................................................................
 Problem 2g: One way to compress a list of characters is to use
@@ -252,10 +345,34 @@ Replace the lines below with your own definitions of "to_run_length"
 and "from_run_length".
 ......................................................................*)
 
-let to_run_length = (fun _ -> failwith "to_run_length not implemented") ;;
+(* Takes a list of characters and turns them into a run length list*)
+let rec to_run_length (lst : char list) = 
+	(* Encodes a single run of letters, such as all a's in a row, and then 
+	returns the length of the run, the character in the run, and the remaining
+	list after the elements in tne run were removed *)
+	let rec encode_run (lst : char list) (ch : char) (len : int) = 
+		match lst with
+		| [] -> (len, ch, [])
+		| hd :: tl as lst-> if hd = ch then (encode_run tl ch (len + 1))
+		else (len, ch, lst) in
 
-let from_run_length =
-  (fun _ -> failwith "from_run_length not implemented") ;;
+	match lst with 
+	| [] -> []
+	| hd :: tl -> match (encode_run tl hd 1) with
+		| len, ch, ls -> (len, ch) :: to_run_length ls;;
+
+
+(* Takes a run length list and turns it into a decompressed list*)
+let rec from_run_length (lst : (int * char) list) =
+	(* Turns a single tuple denoting a run into a list containing the characher
+	the amount of times specified in the run *)
+ 	let rec decode_run (len : int) (ch : char) =
+  		if len > 0 then ch :: (decode_run (len - 1) ch)
+  		else [] in
+
+ 	match lst with
+  	| [] -> []
+  	| (len, ch) :: tl -> (decode_run len ch) @ (from_run_length tl);;
 
 (*======================================================================
 Problem 3: Challenge problem: Permutations
@@ -288,9 +405,42 @@ Here is the signature of permutations:
 
 Replace the line below with your own definition of "permutations".
 ......................................................................*)
+(* We know that any call of insert will be within range of the array
+due to the way we call it in interleave*)
 
-let permutations = (fun _ -> failwith "permutations not implemented") ;;
+let rec permutations (lst : int list) =
+	(* Inserts an element into the idx'th index of lst. Since I call it
+	internally and know the index will always be in the list, I do not need to
+	check for the case where it isn't in my code*)
+	let rec insert (ele : int) (idx : int) (lst : int list) = 
+		match lst with
+		| [] -> [ele]
+		| hd :: tl -> if idx <= 0 then ele :: lst
+			else hd :: insert ele (idx - 1) tl in
 
+	(* Returns the length of the list *)
+	let rec length (lst : int list) = 
+		match lst with
+		| [] -> 0
+		| _ :: tl -> 1 + length (tl) in
+
+	(* Takes a number and puts it into every single position in the list. When I
+	call this function it starts at the length of the list, and based on the 
+	recursion will get called every time until an invalid index (-1) is used *)
+	let rec interleave (idx : int) (num : int) (lst : int list) = 
+		if idx >= 0 then (insert num idx lst) :: (interleave (idx - 1) num lst)
+		else [] in
+
+	(* Recursively runs interleave on every element in a list of lists and 
+	combines the result into a new list of lists *)
+	let rec interweave (num : int) (lst : int list list) = 
+		match lst with
+		| hd :: tl -> (interleave (length hd) num hd) @ (interweave num tl)
+		| _ -> [] in
+
+	match lst with
+	| hd :: tl -> interweave hd (permutations tl)
+	| x -> [x];;
 
 (*======================================================================
 Time estimate
@@ -301,4 +451,4 @@ about your responses and will use them to help guide us in creating
 future assignments.
 ......................................................................*)
 
-let minutes_spent_on_pset () : int = failwith "not provided" ;;
+let minutes_spent_on_pset () : int = 360 ;;
